@@ -20,6 +20,15 @@ class Data:
     def __str__(self):
         return f"{self.dia}/{self.mes}/{self.ano}"
 
+    # métodos estáticos
+
+    @staticmethod
+    def today() -> Data:
+        import datetime
+
+        today = datetime.date.today()
+        return Data(today.day, today.month, today.year)
+
 
 class Aniversario:
     def __init__(self, nome: str, data: Data):
@@ -74,6 +83,13 @@ class Aniversarios:
             if aniversario.data.mes == mes:
                 aniversarios.append(aniversario)
         return aniversarios
+
+    def buscarPorMêsDia(self, mes: int, dia: int):
+        nives_do_dia = []
+        for aniversario in self.aniversarios:
+            if aniversario.data.mes == mes and aniversario.data.dia == dia:
+                nives_do_dia.append(aniversario)
+        return nives_do_dia
 
     def adicionar(self, aniversario: Aniversario):
         self.aniversarios.append(aniversario)

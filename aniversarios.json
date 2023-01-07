@@ -23,6 +23,14 @@
                 "mes": 11
             },
             "nome": "Joe Doe"
+        },
+        {
+            "data": {
+                "ano": 2000,
+                "dia": 7,
+                "mes": 1
+            },
+            "nome": "Teste"
         }
     ]
 }
