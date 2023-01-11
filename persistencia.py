@@ -1,9 +1,26 @@
 from __future__ import annotations
+
 import json
 import os
 import re
+from datetime import date, datetime, timedelta
 
 dataFile = "aniversarios.json"
+
+MESES_TABLE = {
+    "1": "Janeiro",
+    "2": "Fevereiro",
+    "3": "Março",
+    "4": "Abril",
+    "5": "Maio",
+    "6": "Junho",
+    "7": "Julho",
+    "8": "Agosto",
+    "9": "Setembro",
+    "10": "Outubro",
+    "11": "Novembro",
+    "12": "Dezembro",
+}
 
 
 class Data:
@@ -14,19 +31,36 @@ class Data:
         if not self.isValid():
             raise Exception("Data inválida")
 
-    def isValid(self):
+    def isValid(self) -> bool:
         return self.dia > 0 and self.dia <= 31 and self.mes > 0 and self.mes <= 12
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.dia}/{self.mes}/{self.ano}"
 
-    # métodos estáticos
+    def __ge__(self, other) -> bool:
+        # ignore ano
+        return (self.ano == other.ano and self.mes > other.mes) or (
+            self.mes == other.mes and self.dia >= other.dia
+        )
 
+    def __gt__(self, other) -> bool:
+        return (self.ano == other.ano and self.mes > other.mes) or (
+            self.mes == other.mes and self.dia > other.dia
+        )
+
+    def __eq__(self, other) -> bool:
+        return self.mes == other.mes and self.dia == other.dia
+
+    def copy(self) -> Data:
+        return Data(self.dia, self.mes, self.ano)
+
+    def toDatetime(self) -> datetime:
+        return datetime(self.ano, self.mes, self.dia)
+
+    # métodos estáticos
     @staticmethod
     def today() -> Data:
-        import datetime
-
-        today = datetime.date.today()
+        today = date.today()
         return Data(today.day, today.month, today.year)
 
 
@@ -34,6 +68,19 @@ class Aniversario:
     def __init__(self, nome: str, data: Data):
         self.nome = nome
         self.data = data
+
+    def __repr__(self) -> str:
+        return f"{self.nome} - {self.data.dia} de {MESES_TABLE[str(self.data.mes)]} - em {self.diasAteProximo()} dia(s)"
+
+    def diasAteProximo(self) -> int:
+        today = Data.today()
+        data_nasci = self.data.copy()
+        # mover data_nasci para ano atual
+        data_nasci.ano = today.ano
+        # se ja passou mover para ano seguinte
+        if today > data_nasci:
+            data_nasci.ano += 1
+        return (data_nasci.toDatetime() - today.toDatetime()).days
 
 
 class Aniversarios:
@@ -76,26 +123,43 @@ class Aniversarios:
             if regex.match(aniversario.nome):
                 aniversarios.append(aniversario)
         return aniversarios
+    
+    def buscarPorNomeExato(self, nome: str) -> Aniversario:
+        for aniversario in self.aniversarios:
+            if aniversario.nome == nome:
+                return aniversario
+        raise Exception("Aniversário não encontrado")
+    
 
-    def buscarPorMês(self, mes: int):
+
+    def buscarPorMês(self, mes: int) -> list[Aniversario]:
         aniversarios = []
         for aniversario in self.aniversarios:
             if aniversario.data.mes == mes:
                 aniversarios.append(aniversario)
         return aniversarios
 
-    def buscarPorMêsDia(self, mes: int, dia: int):
-        nives_do_dia = []
+    def buscarPorMêsDia(self, mes: int, dia: int) -> list[Aniversario]:
+        niver_no_dia = []
         for aniversario in self.aniversarios:
             if aniversario.data.mes == mes and aniversario.data.dia == dia:
-                nives_do_dia.append(aniversario)
-        return nives_do_dia
+                niver_no_dia.append(aniversario)
+        return niver_no_dia
 
-    def adicionar(self, aniversario: Aniversario):
+    def buscarProximos(self) -> list[Aniversario]:
+        aniversarios = []
+        for aniversario in self.aniversarios:
+            if aniversario.diasAteProximo() <= 30:
+                aniversarios.append(aniversario)
+        return sorted(
+            aniversarios, key=lambda aniversario: aniversario.diasAteProximo()
+        )
+
+    def adicionar(self, aniversario: Aniversario) -> None:
         self.aniversarios.append(aniversario)
         Aniversarios.salvar(self, dataFile)
 
-    def remover(self, nome: str):
+    def remover(self, nome: str) -> None:
         for aniversario in self.aniversarios:
             if aniversario.nome == nome:
                 self.aniversarios.remove(aniversario)
