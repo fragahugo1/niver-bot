@@ -1,11 +1,17 @@
 from __future__ import annotations
-import openai
-import os
-from dotenv import load_dotenv
-from persistencia import Data
+
 import datetime
+import logging
+import os
+
+import openai
+from dotenv import load_dotenv
+
+from persistencia import Data
 
 load_dotenv()
+
+logger = logging.getLogger("niverbot")
 
 openai_key = os.getenv("OPENAI_KEY")
 
@@ -13,7 +19,7 @@ openai_disable = False
 
 if openai_key is None:
     openai_disable = True
-    print("OpenAI key not found, disabling OpenAI")
+    logger.error("OpenAI key not found disabling OpenAI")
 
 
 def MensagemAniversario(nome: str, data: Data) -> str:
