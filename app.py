@@ -24,6 +24,7 @@ if discord_token is None:
 if tenor_key is None or google_app_name is None:
     print("Tenor key or google app name not found, gif will not be fetched")
 
+
 def getTenorGifUrl(search: str) -> str:
     if tenor_key is None or google_app_name is None:
         raise Exception("Tenor key or google app name not found")
@@ -46,7 +47,7 @@ class BirthDayChecker(commands.Cog):
         self.checkBirthdaysLoops.start()
 
     # 24 hours
-    @tasks.loop(seconds=24)
+    @tasks.loop(hours=24)
     async def checkBirthdaysLoops(self):
         print("Checking birthdays")
         await self.checkBirthday()
@@ -74,7 +75,7 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print(f"Logged on as {self.user}!")
         self.birthDayChecker = BirthDayChecker(self)
-        
+
         channel_id = self.aniversarios.discord_channel
         if channel_id:
             self.birthday_channel = self.get_channel(channel_id)
@@ -156,7 +157,9 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
         # get current channel
         self.birthday_channel = message.channel
         self.aniversarios.setDiscord_channel(message.channel.id)
-        await message.channel.send(f"Canal de aniversários definido!\n {message.channel.mention}")
+        await message.channel.send(
+            f"Canal de aniversários definido!\n {message.channel.mention}"
+        )
 
     async def ajuda_command(self, message):
         await message.channel.send(
@@ -274,7 +277,7 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
         # typing
         async with message.channel.typing():
             for aniversario in aniversarios:
-                mensagem += f"Aniversario de {aniversario.nome} sera em {aniversario.diasAteProximo()} dia(s) \n"
+                mensagem += f"Aniversario de {aniversario.nome} sera em {aniversario.diasAteProximo()} dia(s), estará fazendo {aniversario.idade()} anos \n"
             await message.channel.send(mensagem)
 
     async def hoje_command(self, message):

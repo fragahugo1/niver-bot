@@ -87,6 +87,10 @@ class Aniversario:
             data_nasci.ano += 1
         return (data_nasci.toDatetime() - today.toDatetime()).days
 
+    def idade(self) -> int:
+        today = Data.today()
+        return today.ano - self.data.ano
+
 
 class Aniversarios:
     def __init__(self):
