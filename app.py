@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 import os
+import random
 import re
 import discord
 from dotenv import load_dotenv
@@ -30,11 +31,13 @@ def getTenorGifUrl(search: str) -> str:
         raise Exception("Tenor key or google app name not found")
     url = (
         "https://tenor.googleapis.com/v2/search?q=%s&key=%s&client_key=%s&limit=%s"
-        % (search, tenor_key, google_app_name, 1)
+        % (search, tenor_key, google_app_name, 5)
     )
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()["results"][0]["media_formats"]["gif"]["url"]
+        return response.json()["results"][
+            random.randint(0, len(response.json()["results"]) - 1)
+        ]["media_formats"]["gif"]["url"]
     else:
         raise Exception(
             f"Error getting gif from tenor: {response.status_code} {response.text}"

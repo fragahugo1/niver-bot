@@ -97,6 +97,12 @@ class Aniversarios:
         self.aniversarios = []
         self.discord_channel = None
 
+    def ordenar(self):
+        # ordenar a partir de quantos dias faltam
+        self.aniversarios = sorted(
+            self.aniversarios, key=lambda aniversario: aniversario.diasAteProximo()
+        )
+
     # persist in json
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
@@ -171,6 +177,8 @@ class Aniversarios:
                 nome = aniversario["nome"]
                 aniversario = Aniversario(nome, data_niver)
                 aniversarios.aniversarios.append(aniversario)
+            # ordenar aniversarios
+            aniversarios.ordenar()
             if "discord_channel" in filedata:
                 aniversarios.discord_channel = filedata["discord_channel"]
         return aniversarios
@@ -178,6 +186,8 @@ class Aniversarios:
     # Método estático para salvar aniversários
     @staticmethod
     def salvar(aniversarios: Aniversarios, path: str):
+        # ordenar aniversarios
+        aniversarios.ordenar()
         with open(path, "w") as f:
             f.write(aniversarios.toJSON())
 
