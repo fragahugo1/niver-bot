@@ -91,6 +91,7 @@ class Aniversario:
 class Aniversarios:
     def __init__(self):
         self.aniversarios = []
+        self.discord_channel = None
 
     # Método estático para carregar aniversários
     @staticmethod
@@ -107,6 +108,8 @@ class Aniversarios:
                 nome = aniversario["nome"]
                 aniversario = Aniversario(nome, data)
                 aniversarios.aniversarios.append(aniversario)
+            if "discord_channel" in data:
+                aniversarios.discord_channel = data["discord_channel"]
         return aniversarios
 
     # Método estático para salvar aniversários
