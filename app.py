@@ -33,7 +33,7 @@ def getTenorGifUrl(search: str) -> str:
     )
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()["results"][0]["media"][0]["gif"]["url"]
+        return response.json()["results"][0]["media_formats"]["gif"]["url"]
     else:
         raise Exception(
             f"Error getting gif from tenor: {response.status_code} {response.text}"
@@ -69,17 +69,26 @@ class MyClient(discord.Client):
         self.aniversarios = Aniversarios.carregar(dataFile)
         self.command_prefix = "a!"
         self.lestCheckDate = None
-        self.generalChannel = None
+        self.birthday_channel = None
 
     async def on_ready(self):
         print(f"Logged on as {self.user}!")
         self.birthDayChecker = BirthDayChecker(self)
+        
+        channel_id = self.aniversarios.discord_channel
+        if channel_id:
+            self.birthday_channel = self.get_channel(channel_id)
+            if self.birthday_channel:
+                print(f"Found birthday channel {self.birthday_channel.name}")
+                await self.birthday_channel.send("Bot iniciado")
+            else:
+                print(f"Birthday channel not found")
 
     async def verifyEachBirthday(self, aniversarios):
-        if self.generalChannel:
+        if self.birthday_channel:
             print(f"Found {len(aniversarios)} birthdays")
             # typing
-            async with self.generalChannel.typing():
+            async with self.birthday_channel.typing():
                 for aniversario in aniversarios:
                     print(f"Found birthday for {aniversario.nome}")
                     try:
@@ -87,10 +96,10 @@ class MyClient(discord.Client):
                     except Exception as e:
                         print(f"Error generating message: {e}")
                         msg = f"Parabéns {aniversario.nome}!"
-                    await self.generalChannel.send(msg)
+                    await self.birthday_channel.send(msg)
                     try:
                         gif = getTenorGifUrl("happy birthday".replace(" ", "_"))
-                        await self.generalChannel.send(gif)
+                        await self.birthday_channel.send(gif)
                     except Exception as e:
                         print(f"Error getting gif: {e}")
         else:
@@ -106,43 +115,48 @@ class MyClient(discord.Client):
     async def process_message(self, message):
         if message.content.startswith(self.command_prefix):
             command = message.content[len(self.command_prefix) :]
-            # Adicionar
-            if command == "add":
-                await self.adicionar_command(message)
-            # Listar todos
-            elif command == "list":
-                await self.listar_command(message)
-            # Remover
-            elif command == "del":
-                await self.remover_command(message)
-            # Busca por nome
-            elif command == "b":
-                await self.buscar_command(message)
-            # Busca por mes
-            elif command == "bmes":
-                await self.buscar_mes_command(message)
-            # Proximos
-            elif command == "next":
-                await self.próximos_command(message)
-            # Hoje
-            elif command == "hoje":
-                await self.hoje_command(message)
-            # Mensagem
-            elif command == "msg":
-                await self.mensagem_command(message)
-            # Setup
-            elif command == "setup":
-                # get current channel
-                self.generalChannel = message.channel
-                await message.channel.send("Canal de aniversários definido!")
-            # Ajudar
-            elif command == "ajuda":
-                await self.ajuda_command(message)
-            else:
-                await message.channel.send(
-                    f"""Comando inválido {message.author.mention}
+            match command:
+                # Adicionar
+                case "add":
+                    await self.adicionar_command(message)
+                # Listar todos
+                case "list":
+                    await self.listar_command(message)
+                # Remover
+                case "del":
+                    await self.remover_command(message)
+                # Busca por nome
+                case "b":
+                    await self.buscar_command(message)
+                # Busca por mes
+                case "bmes":
+                    await self.buscar_mes_command(message)
+                # Proximos
+                case "next":
+                    await self.próximos_command(message)
+                # Hoje
+                case "hoje":
+                    await self.hoje_command(message)
+                # Mensagem
+                case "msg":
+                    await self.mensagem_command(message)
+                # Setup
+                case "setup":
+                    await self.setup_command(message)
+                # Ajudar
+                case "ajuda":
+                    await self.ajuda_command(message)
+                case _:
+                    await message.channel.send(
+                        f"""Comando inválido {message.author.mention}
 Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
-                )
+                    )
+
+    async def setup_command(self, message):
+        # get current channel
+        self.birthday_channel = message.channel
+        self.aniversarios.setDiscord_channel(message.channel.id)
+        await message.channel.send(f"Canal de aniversários definido!\n {message.channel.mention}")
 
     async def ajuda_command(self, message):
         await message.channel.send(

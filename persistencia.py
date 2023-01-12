@@ -38,7 +38,7 @@ class Data:
             return True
         except ValueError:
             return False
-        
+
     def __str__(self) -> str:
         return f"{self.dia}/{self.mes}/{self.ano}"
 
@@ -93,34 +93,13 @@ class Aniversarios:
         self.aniversarios = []
         self.discord_channel = None
 
-    # Método estático para carregar aniversários
-    @staticmethod
-    def carregar(path: str) -> Aniversarios:
-        aniversarios = Aniversarios()
-        with open(path, "r") as f:
-            data = json.loads(f.read())
-            for aniversario in data["aniversarios"]:
-                data = Data(
-                    int(aniversario["data"]["dia"]),
-                    int(aniversario["data"]["mes"]),
-                    int(aniversario["data"]["ano"]),
-                )
-                nome = aniversario["nome"]
-                aniversario = Aniversario(nome, data)
-                aniversarios.aniversarios.append(aniversario)
-            if "discord_channel" in data:
-                aniversarios.discord_channel = data["discord_channel"]
-        return aniversarios
-
-    # Método estático para salvar aniversários
-    @staticmethod
-    def salvar(aniversarios: Aniversarios, path: str):
-        with open(path, "w") as f:
-            f.write(aniversarios.toJSON())
-
     # persist in json
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+    def setDiscord_channel(self, channel_id):
+        self.discord_channel = channel_id
+        Aniversarios.salvar(self, dataFile)
 
     # Buscar por nome
     def buscarPorNome(self, nome: str) -> list[Aniversario]:
@@ -131,14 +110,12 @@ class Aniversarios:
             if regex.match(aniversario.nome):
                 aniversarios.append(aniversario)
         return aniversarios
-    
+
     def buscarPorNomeExato(self, nome: str) -> Aniversario:
         for aniversario in self.aniversarios:
             if aniversario.nome == nome:
                 return aniversario
         raise Exception("Aniversário não encontrado")
-    
-
 
     def buscarPorMês(self, mes: int) -> list[Aniversario]:
         aniversarios = []
@@ -174,6 +151,31 @@ class Aniversarios:
                 Aniversarios.salvar(self, dataFile)
                 return
         raise Exception("Aniversario não encontrado")
+
+    # Método estático para carregar aniversários
+    @staticmethod
+    def carregar(path: str) -> Aniversarios:
+        aniversarios = Aniversarios()
+        with open(path, "r") as f:
+            filedata = json.loads(f.read())
+            for aniversario in filedata["aniversarios"]:
+                data_niver = Data(
+                    int(aniversario["data"]["dia"]),
+                    int(aniversario["data"]["mes"]),
+                    int(aniversario["data"]["ano"]),
+                )
+                nome = aniversario["nome"]
+                aniversario = Aniversario(nome, data_niver)
+                aniversarios.aniversarios.append(aniversario)
+            if "discord_channel" in filedata:
+                aniversarios.discord_channel = filedata["discord_channel"]
+        return aniversarios
+
+    # Método estático para salvar aniversários
+    @staticmethod
+    def salvar(aniversarios: Aniversarios, path: str):
+        with open(path, "w") as f:
+            f.write(aniversarios.toJSON())
 
 
 if __name__ == "__main__":
