@@ -5,6 +5,7 @@ import os
 import re
 import discord
 from dotenv import load_dotenv
+import requests
 
 from open_ai_util import MensagemAniversario
 from persistencia import Aniversario, Aniversarios, Data, dataFile
@@ -13,10 +14,30 @@ from discord.ext import tasks, commands
 load_dotenv()
 
 discord_token = os.getenv("DISCORD_TOKEN")
+tenor_key = os.getenv("TENOR_GOOGLE_KEY")
+google_app_name = os.getenv("GOOGLE_APP_NAME")
 
 if discord_token is None:
     print("Discord token not found")
     exit(1)
+
+if tenor_key is None or google_app_name is None:
+    print("Tenor key or google app name not found, gif will not be fetched")
+
+def getTenorGifUrl(search: str) -> str:
+    if tenor_key is None or google_app_name is None:
+        raise Exception("Tenor key or google app name not found")
+    url = (
+        "https://tenor.googleapis.com/v2/search?q=%s&key=%s&client_key=%s&limit=%s"
+        % (search, tenor_key, google_app_name, 1)
+    )
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()["results"][0]["media"][0]["gif"]["url"]
+    else:
+        raise Exception(
+            f"Error getting gif from tenor: {response.status_code} {response.text}"
+        )
 
 
 class BirthDayChecker(commands.Cog):
@@ -25,7 +46,7 @@ class BirthDayChecker(commands.Cog):
         self.checkBirthdaysLoops.start()
 
     # 24 hours
-    @tasks.loop(hours=24)
+    @tasks.loop(seconds=24)
     async def checkBirthdaysLoops(self):
         print("Checking birthdays")
         await self.checkBirthday()
@@ -57,7 +78,7 @@ class MyClient(discord.Client):
     async def verifyEachBirthday(self, aniversarios):
         if self.generalChannel:
             print(f"Found {len(aniversarios)} birthdays")
-            # typing 
+            # typing
             async with self.generalChannel.typing():
                 for aniversario in aniversarios:
                     print(f"Found birthday for {aniversario.nome}")
@@ -67,9 +88,13 @@ class MyClient(discord.Client):
                         print(f"Error generating message: {e}")
                         msg = f"Parabéns {aniversario.nome}!"
                     await self.generalChannel.send(msg)
+                    try:
+                        gif = getTenorGifUrl("happy birthday".replace(" ", "_"))
+                        await self.generalChannel.send(gif)
+                    except Exception as e:
+                        print(f"Error getting gif: {e}")
         else:
             print("General channel not found")
-       
 
     async def on_message(self, message):
         print(f"Message from {message.author}: {message.content}")
@@ -121,7 +146,7 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
 
     async def ajuda_command(self, message):
         await message.channel.send(
-                    f"""
+            f"""
                     Comandos:
 ```markdown
 + {self.command_prefix}add - Adiciona um aniversário
@@ -136,13 +161,11 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
 + {self.command_prefix}setup - Define o atual canal de aniversários
 ```
 """
-                )
+        )
 
     async def buscar_mes_command(self, message):
         await message.channel.send("Digite o mês que deseja buscar, EX: 01, 4, 12 ... ")
-        mes = await self.wait_for(
-                    "message", check=lambda m: m.author == message.author
-                )
+        mes = await self.wait_for("message", check=lambda m: m.author == message.author)
         try:
             mes = mes.content
             aniversarios = self.aniversarios.buscarPorMês(int(mes))
@@ -157,13 +180,13 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
     async def buscar_command(self, message):
         await message.channel.send("Digite o nome que deseja buscar")
         nome = await self.wait_for(
-                    "message", check=lambda m: m.author == message.author
-                )
+            "message", check=lambda m: m.author == message.author
+        )
         try:
             nome = nome.content
             aniversarios = self.aniversarios.buscarPorNome(nome)
             mensagem = ""
-            # typing 
+            # typing
             async with message.channel.typing():
                 for aniversario in aniversarios:
                     mensagem += f"{str(aniversario)} \n"
@@ -175,10 +198,10 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
     async def remover_command(self, message):
         await message.channel.send("Digite o nome do aniversariante")
         nome = await self.wait_for(
-                    "message", check=lambda m: m.author == message.author
-                )
+            "message", check=lambda m: m.author == message.author
+        )
         try:
-             # typing 
+            # typing
             async with message.channel.typing():
                 nome = nome.content
                 self.aniversarios.remover(nome)
@@ -189,7 +212,7 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
 
     async def listar_command(self, message):
         aniversarios = ""
-         # typing 
+        # typing
         async with message.channel.typing():
             for aniversario in self.aniversarios.aniversarios:
                 aniversarios += f"{str(aniversario)} \n"
@@ -198,12 +221,12 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
     async def adicionar_command(self, message):
         await message.channel.send("Digite o nome:")
         nome = await self.wait_for(
-                    "message", check=lambda m: m.author == message.author
-                )
+            "message", check=lambda m: m.author == message.author
+        )
         await message.channel.send("Digite a data de nascimento: Ex: 30/04/2000")
         data = await self.wait_for(
-                    "message", check=lambda m: m.author == message.author
-                )
+            "message", check=lambda m: m.author == message.author
+        )
         dateRegex = re.compile(r"\d{1,2}/\d{1,2}/\d{4}")
         if not dateRegex.match(data.content):
             await message.channel.send("Data inválida!")
@@ -212,7 +235,7 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
         mes = data.content.split("/")[1]
         ano = data.content.split("/")[2]
         try:
-            # typing 
+            # typing
             async with message.channel.typing():
                 nome = nome.content
                 data = Data(int(dia), int(mes), int(ano))
@@ -226,47 +249,50 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
             await message.channel.send(f"Erro ao adicionar aniversário: {e}")
 
     async def próximos_command(self, message):
-        #Busca os aniversarios nos próximos 30 dias 
+        # Busca os aniversarios nos próximos 30 dias
         aniversarios = self.aniversarios.buscarProximos()
         mensagem = ""
         if len(aniversarios) == 0:
-            await message.channel.send("Nem um aniversario acontecera nos próximos 30 dias")
+            await message.channel.send(
+                "Nem um aniversario acontecera nos próximos 30 dias"
+            )
             return
-        # typing 
+        # typing
         async with message.channel.typing():
             for aniversario in aniversarios:
                 mensagem += f"Aniversario de {aniversario.nome} sera em {aniversario.diasAteProximo()} dia(s) \n"
             await message.channel.send(mensagem)
 
     async def hoje_command(self, message):
-        #Busca os aniversarios nos próximos 30 dias 
+        # Busca os aniversarios nos próximos 30 dias
         mensagem = ""
         hoje = Data.today()
         aniversarios = self.aniversarios.buscarPorMêsDia(hoje.mes, hoje.dia)
         if len(aniversarios) == 0:
             await message.channel.send("Nem um aniversario acontecera hoje")
             return
-        # typing 
+        # typing
         async with message.channel.typing():
             for aniversario in aniversarios:
                 mensagem += f"Parabéns {aniversario.nome} \n"
             await message.channel.send(mensagem)
 
-    async def mensagem_command(self, message): 
+    async def mensagem_command(self, message):
         await message.channel.send("Digite o nome do aniversariante")
-        nome = await self.wait_for( "message", check=lambda m: m.author == message.author)
+        nome = await self.wait_for(
+            "message", check=lambda m: m.author == message.author
+        )
         try:
             aniversario = self.aniversarios.buscarPorNomeExato(nome.content)
-            # typing 
+            # typing
             async with message.channel.typing():
-                message_str = MensagemAniversario(aniversario.nome,aniversario.data)
+                message_str = MensagemAniversario(aniversario.nome, aniversario.data)
             await message.channel.send(message_str)
         except Exception as e:
             await message.channel.send(f"Erro ao buscar aniversário: {e}")
             return
 
 
-        
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
