@@ -57,14 +57,16 @@ class MyClient(discord.Client):
     async def verifyEachBirthday(self, aniversarios):
         if self.generalChannel:
             print(f"Found {len(aniversarios)} birthdays")
-            for aniversario in aniversarios:
-                print(f"Found birthday for {aniversario.nome}")
-                try:
-                    msg = MensagemAniversario(aniversario.nome, aniversario.data)
-                except Exception as e:
-                    print(f"Error generating message: {e}")
-                    msg = f"Parabéns {aniversario.nome}!"
-                await self.generalChannel.send(msg)
+            # typing 
+            async with self.generalChannel.typing():
+                for aniversario in aniversarios:
+                    print(f"Found birthday for {aniversario.nome}")
+                    try:
+                        msg = MensagemAniversario(aniversario.nome, aniversario.data)
+                    except Exception as e:
+                        print(f"Error generating message: {e}")
+                        msg = f"Parabéns {aniversario.nome}!"
+                    await self.generalChannel.send(msg)
         else:
             print("General channel not found")
        
@@ -202,7 +204,7 @@ Digite {self.command_prefix}ajuda para ver os comandos disponíveis"""
         data = await self.wait_for(
                     "message", check=lambda m: m.author == message.author
                 )
-        dateRegex = re.compile(r"((0[1-9]|1[0-2])/(0[1-9]|1[0-9]|2[0-9]|3[0-1])/\d{4})")
+        dateRegex = re.compile(r"\d{1,2}/\d{1,2}/\d{4}")
         if not dateRegex.match(data.content):
             await message.channel.send("Data inválida!")
             return

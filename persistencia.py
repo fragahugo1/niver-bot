@@ -32,8 +32,13 @@ class Data:
             raise Exception("Data inválida")
 
     def isValid(self) -> bool:
-        return self.dia > 0 and self.dia <= 31 and self.mes > 0 and self.mes <= 12
-
+        # try to create a datetime object
+        try:
+            datetime(self.ano, self.mes, self.dia)
+            return True
+        except ValueError:
+            return False
+        
     def __str__(self) -> str:
         return f"{self.dia}/{self.mes}/{self.ano}"
 
